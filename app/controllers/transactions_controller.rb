@@ -3,7 +3,12 @@ class TransactionsController < ApplicationController
 
   # GET /transactions or /transactions.json
   def index
-    @transactions = Transaction.all
+    if current_user.id != nil
+      @transactions = Transaction.where(user_id: current_user.id)
+    else
+      # if current user is not null, assign all transactions
+      @transactions = Transaction.all
+    end
   end
 
   # GET /transactions/1 or /transactions/1.json
@@ -13,6 +18,11 @@ class TransactionsController < ApplicationController
   # GET /transactions/new
   def new
     @transaction = Transaction.new
+    # We add these lines so that the selected product's data fields and user's credit cards are available to the views at the front end
+    if @product.nil?
+      @product = Product.find(params[:product_id])
+    end
+    @credit_cards = current_user.credit_cards
   end
 
   # GET /transactions/1/edit
@@ -22,7 +32,14 @@ class TransactionsController < ApplicationController
   # POST /transactions or /transactions.json
   def create
     @transaction = Transaction.new(transaction_params)
-
+    # We create the transaction number using a random string of length 10
+    @transaction.transaction_number = Array.new(10){[*"A".."Z", *"0".."9"].sample}.join
+    @product = Product.find(params[:transaction][:product_id])
+    # We link the transaction to the current user and their credit card
+    @transaction.user = current_user
+    # We update the original product quantity
+    @product.quantity = @product.quantity - @transaction.quantity
+    @product.save
     respond_to do |format|
       if @transaction.save
         format.html { redirect_to @transaction, notice: "Transaction was successfully created." }
@@ -65,6 +82,6 @@ class TransactionsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def transaction_params
-      params.expect(transaction: [ :transaction_number, :quantity, :total_cost ])
+      params.require(:transaction).permit(:quantity, :total_cost, :product_id, :credit_card_id)
     end
 end

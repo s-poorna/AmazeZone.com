@@ -22,7 +22,7 @@ class CreditCardsController < ApplicationController
   # POST /credit_cards or /credit_cards.json
   def create
     @credit_card = CreditCard.new(credit_card_params)
-
+    @credit_card.user_id = current_user.id
     respond_to do |format|
       if @credit_card.save
         format.html { redirect_to @credit_card, notice: "Credit card was successfully created." }
